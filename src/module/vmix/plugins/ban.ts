@@ -16,15 +16,21 @@ export class BanPlugin extends VmixPlugin {
 
   private resetBanUrls() {
     this.existedBans.clear()
-    return Array(10).fill(0).map((_, index) => {
+    const urls = Array(10).fill(0).map((_, index) => {
       const side = index + 1 < 6 ? "xanh" : "do"
       const pos = index + 1 < 6 ? index + 1 : index + 1 - 5
-      return this.createImageUrl({
+      const url = this.createImageUrl({
         type: "champ-ban",
         blockName: `player${side}ban${pos}`,
         value: 0,
       })
-    })
+      if (!this.existedBans.has(url)) {
+        this.existedBans.add(url)
+        return url
+      }
+    }).filter((x) => x !== undefined)
+
+    return urls
   }
 
   private createBanUrls() {
@@ -68,7 +74,7 @@ export class BanPlugin extends VmixPlugin {
       return [
         this.createTextUrl({
           blockName: "timebanpick",
-          value: "0",
+          value: "",
         }),
       ]
     } else {
@@ -92,6 +98,7 @@ export class BanPlugin extends VmixPlugin {
         urls = this.createPhaseUrl()
       }
     }
+
     return urls
   }
 

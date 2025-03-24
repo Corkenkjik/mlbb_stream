@@ -1,5 +1,5 @@
 import { DataPipeline } from "./pipeline.ts"
-import { fetchBattleData } from "./utils.ts"
+import { fetchBattleData, fetchPostBattleData } from "./utils.ts"
 
 export class GameSource {
   private matchId: string
@@ -21,7 +21,8 @@ export class GameSource {
   }
 
   public async fetchPostgameData() {
-    
+    const data = await fetchPostBattleData(this.matchId)
+    return this.pipeline.processPostgameData(data)
   }
 }
 

@@ -1,5 +1,6 @@
 import { DataRepository } from "#repository/repository.ts"
-import { TeamData } from "#repository/types.ts"
+import { PlayerData, TeamData } from "#repository/types.ts"
+import { formatSeconds } from "#lib/fmt.ts"
 import { EventRegistries, EventRegistry } from "../types.ts"
 import { VmixPlugin } from "./base-plugin.ts"
 
@@ -14,109 +15,89 @@ export class PostGamePlugin extends VmixPlugin {
    * the rest stats will be override
    */
   private resetPlayers() {
-    return Array(10).fill(0).map((_, index) => {
-      const pos = index + 1
+    const urls = Array(10).fill(0).map((_, index) => {
+      const pos = index + 1 < 6 ? index + 1 : index + 1 - 5
       const side = index + 1 < 6 ? "x" : "d"
-      // TODO: Update these
-      return [
-        this.createTextUrl({
-          value: "" + 0,
-          blockName: `p${pos}${side}kill`,
-        }),
-        this.createTextUrl({
-          value: "" + 0,
-          blockName: `p${pos}${side}death`,
-        }),
-        this.createTextUrl({
-          value: "" + 0,
-          blockName: `p${pos}${side}assist`,
-        }),
-        this.createTextUrl({
-          value: "" + 0,
-          blockName: `p${pos}${side}level`,
-        }),
-        this.createTextUrl({
-          value: "" + 0,
-          blockName: `p${pos}${side}gold`,
-        }),
-      ]
+
+      const items = Array(6).fill(0).map((_, itemIndex) => {
+        return this.createImageUrl({
+          type: "item",
+          value: 0,
+          blockName: `p${pos}${side}item${itemIndex + 1}`,
+        })
+      })
+
+      return items
     }).flatMap((x) => x)
+    return urls
   }
 
   private createPlayersUrls() {
     const bluePlayers = DataRepository.getInstance().players.blue
     const redPlayers = DataRepository.getInstance().players.red
 
-    const blue = bluePlayers.map((player, index) => {
-      const pos = index + 1
-      const side = "x"
-      const playerItems = player.item_list.map((item, itemIndex) => {
-        return this.createImageUrl({
-          type: "item",
-          value: item,
-          blockName: `p${pos}${side}item${itemIndex + 1}`,
-        })
-      })
+    const createUrls = (players: PlayerData[], side: "x" | "d") => {
+      const names = side === "x"
+        ? DataRepository.getInstance().setup.blue.players
+        : DataRepository.getInstance().setup.red.players
 
-      return [
-        ...playerItems,
-        this.createTextUrl({
-          value: "" + player.kill,
-          blockName: `p${pos}${side}kill`,
-        }),
-        this.createTextUrl({
-          value: "" + player.death,
-          blockName: `p${pos}${side}death`,
-        }),
-        this.createTextUrl({
-          value: "" + player.assist,
-          blockName: `p${pos}${side}assist`,
-        }),
-        this.createTextUrl({
-          value: "" + player.level,
-          blockName: `p${pos}${side}level`,
-        }),
-        this.createTextUrl({
-          value: "" + player.gold,
-          blockName: `p${pos}${side}gold`,
-        }),
-      ]
-    }).flatMap((x) => x)
-    const red = redPlayers.map((player, index) => {
-      const pos = index + 1
-      const side = "d"
-      const playerItems = player.item_list.map((item, itemIndex) => {
-        return this.createImageUrl({
-          type: "item",
-          value: item,
-          blockName: `p${pos}${side}item${itemIndex + 1}`,
+      return players.map((player, index) => {
+        const pos = index + 1
+        const playerItems = player.item_list.map((item, itemIndex) => {
+          return this.createImageUrl({
+            type: "item",
+            value: item,
+            blockName: `p${pos}${side}item${itemIndex + 1}`,
+          })
         })
-      })
 
-      return [
-        ...playerItems,
-        this.createTextUrl({
-          value: "" + player.kill,
-          blockName: `p${pos}${side}kill`,
-        }),
-        this.createTextUrl({
-          value: "" + player.death,
-          blockName: `p${pos}${side}death`,
-        }),
-        this.createTextUrl({
-          value: "" + player.assist,
-          blockName: `p${pos}${side}assist`,
-        }),
-        this.createTextUrl({
-          value: "" + player.level,
-          blockName: `p${pos}${side}level`,
-        }),
-        this.createTextUrl({
-          value: "" + player.gold,
-          blockName: `p${pos}${side}gold`,
-        }),
-      ]
-    }).flatMap((x) => x)
+        return [
+          ...playerItems,
+          this.createTextUrl({
+            value: names[index],
+            blockName: `p${pos}${side}name`,
+          }),
+          this.createTextUrl({
+            value: "" + player.kill,
+            blockName: `p${pos}${side}kill`,
+          }),
+          this.createTextUrl({
+            value: "" + player.death,
+            blockName: `p${pos}${side}death`,
+          }),
+          this.createTextUrl({
+            value: "" + player.assist,
+            blockName: `p${pos}${side}assist`,
+          }),
+          this.createTextUrl({
+            value: "" + player.level,
+            blockName: `p${pos}${side}level`,
+          }),
+          this.createTextUrl({
+            value: "" + player.gold,
+            blockName: `p${pos}${side}gold`,
+          }),
+          this.createImageUrl({
+            type: "champ-end",
+            value: player.pick,
+            blockName: `p${pos}${side}hero`,
+          }),
+          this.createImageUrl({
+            type: "player",
+            value: side === "x" ? pos : pos + 5,
+            blockName: `p${pos}${side}`,
+          }),
+          this.createImageUrl({
+            type: "rune",
+            value: player.runeMap["3"] || 0,
+            blockName: `p${pos}${side}ngoc`,
+          }),
+        ]
+      }).flatMap((x) => x)
+    }
+
+    const blue = createUrls(bluePlayers, "x")
+    const red = createUrls(redPlayers, "d")
 
     return [...blue, ...red]
   }
@@ -162,7 +143,14 @@ export class PostGamePlugin extends VmixPlugin {
       ]
     }
 
-    return [...createUrl(blueTeam, "xanh"), ...createUrl(redTeam, "do")]
+    // Gametime
+    const gameTime = DataRepository.getInstance().gameTime
+    const gameTimeUrl = this.createTextUrl({
+      blockName: "gametime",
+      value: gameTime ? formatSeconds(gameTime) : "00:00",
+    })
+
+    return [...createUrl(blueTeam, "xanh"), ...createUrl(redTeam, "do"), gameTimeUrl]
   }
 
   protected override createUrls(event: EventRegistry): string[] {
@@ -176,7 +164,6 @@ export class PostGamePlugin extends VmixPlugin {
         return this.createTeamUrls()
       }
     }
-
     return []
   }
 }

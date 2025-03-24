@@ -27,6 +27,7 @@ export abstract class VmixPlugin {
       | "champ-ban"
       | "champ-pick"
       | "champ-waiting"
+      | "champ-end"
       | "item"
       | "spell"
       | "rune"
@@ -45,6 +46,6 @@ export abstract class VmixPlugin {
 
   public async trigger(payload: EventRegistry) {
     const urls = this.createUrls(payload)
-    RateLimiter.execute(urls)
+    await RateLimiter.execute(urls)
   }
 }

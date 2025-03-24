@@ -1,63 +1,42 @@
 import { logger } from "@kinbay/logger"
 
-/* export class RateLimiter {
-  static execute(urls: string[]) {
-    console.log("RateLimiter is sync these urls to vmix:", urls)
-  }
-}
-
- */
 export class RateLimiter {
-  static maxConcurrentRequests: 5
-  static maxRetries: 3
-  static baseDelay: 2000
-
-  static async fetchWithRetry(url: string, retries = 0): Promise<void> {
-    try {
-      const response = await fetch(url)
-
-      if (!response.ok) {
-        throw new Error(`Request failed with status ${response.status}`)
-      }
-    } catch (error) {
-      if (retries < RateLimiter.maxRetries) {
-        const delay = RateLimiter.baseDelay * Math.pow(2, retries)
-        logger.log(
-          `Retrying ${url} in ${delay}ms... (Attempt ${retries + 1})`,
-          "WARN",
-        )
-        await RateLimiter.sleep(delay)
-        return RateLimiter.fetchWithRetry(url, retries + 1)
-      } else {
-        logger.log(
-          `Failed after ${RateLimiter.maxRetries} attempts: ${url}`,
-          "ERROR",
-        )
-        throw error
-      }
-    }
-  }
-
-  static sleep(ms: number) {
-    return new Promise((resolve) => setTimeout(resolve, ms))
-  }
-
-  static chunkArray<T>(arr: T[], size: number): T[][] {
-    const result: T[][] = []
-    for (let i = 0; i < arr.length; i += size) {
-      result.push(arr.slice(i, i + size))
-    }
-    return result
-  }
-
   static async execute(urls: string[]) {
-    /* const batches = RateLimiter.chunkArray(urls, RateLimiter.maxConcurrentRequests)
+    /* urls.forEach(async (url) => {
+      const response = await fetch(url)
+      // console.log(response.status, url)
+      if (response.status !== 200) {
+        logger.log(`Cannot fetch ${url}`, "ERROR", "RateLimiter.execute")
+      }
+    }) */
+    /* const promises = urls.map((url) => fetch(url))
+    Promise.allSettled(promises).then((results) => {
+      results.forEach((result) => {
+        if (result.status === "rejected") {
+          logger.log(
+            `Cannot fetch ${result.reason}`,
+            "ERROR",
+            "RateLimiter.execute",
+          )
+        }
+      })
+    }) */
 
-    for (const batch of batches) {
-      const promises = batch.map((url) => RateLimiter.fetchWithRetry(url))
-      await Promise.all(promises)
-    } */
+    for (let i = 0; i < urls.length; i += 5) {
+      const batch = urls.slice(i, i + 5)
+      const batchPromises = batch.map((url) => fetch(url))
 
-    console.log("RateLimiter is sync these urls to vmix:", urls)
+      const results = await Promise.allSettled(batchPromises)
+
+      results.forEach((result) => {
+        if (result.status === "rejected") {
+          logger.log(
+            logger.log(result.reason, "ERROR", "RateLimiter.execute"),
+            "ERROR",
+            "RateLimiter.execute",
+          )
+        }
+      })
+    }
   }
 }

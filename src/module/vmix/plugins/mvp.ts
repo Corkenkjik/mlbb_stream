@@ -40,11 +40,18 @@ export class MvpPlugin extends VmixPlugin {
       ? DataRepository.getInstance().players.blue
       : DataRepository.getInstance().players.red
 
+    const winSetup = winCamp === 1
+      ? DataRepository.getInstance().setup.blue
+      : DataRepository.getInstance().setup.red
+
     const mvp = winTeam.find((player) => player.mvp)
     if (!mvp) {
       logger.log("No mvp players found", "ERROR", "MvpPlugin.createMvpUrls")
       throw new Error()
     }
+
+    const mvpIndex = winTeam.indexOf(mvp)
+    const mvpName = winSetup.players[mvpIndex]
 
     const simpleBlock = [
       this.createTextUrl({
@@ -67,6 +74,10 @@ export class MvpPlugin extends VmixPlugin {
         blockName: `dmgDealt`,
         value: "" + mvp.dmgDealt,
       }),
+      this.createTextUrl({
+        blockName: `mvptenplayer`,
+        value: mvpName,
+      }),
       this.createImageUrl({
         type: "rune",
         value: mvp.rune,
@@ -76,6 +87,11 @@ export class MvpPlugin extends VmixPlugin {
         type: "spell",
         value: mvp.skillid,
         blockName: `spell`,
+      }),
+      this.createImageUrl({
+        type: "champ-pick",
+        value: mvp.pick,
+        blockName: `mvptuong`,
       }),
     ]
 

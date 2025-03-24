@@ -41,11 +41,14 @@ export class GameController {
       } else if (data === "paused") {
         isGameStart = 0
         controllerEvents.emit("pause-game", null)
-      } else if (data === "play" && isGameStart === 0) {
+      } else if(data === "adjust") {
+       controllerEvents.emit("adjust-game", null)
+      } 
+      else if (data === "play" && isGameStart === 0) {
         isGameStart++
         controllerEvents.emit("start-game", null)
-      }
-    }, 500)
+      } 
+    }, 250)
   }
 
   public stopStream() {

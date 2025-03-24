@@ -1,3 +1,5 @@
+import { MLBB_SERVER } from "#lib/constant.ts"
+import { API_KEY } from "#lib/env.ts"
 import { MatchesByReferee } from "./types.ts"
 
 export class Referee {
@@ -8,21 +10,10 @@ export class Referee {
   }
 
   public async fetchMatches() {
-    /* const response = await fetch("http://localhost:8001/matches")
-    const data = await response.json()
-    return data */
-
-    const data: MatchesByReferee = {
-      code: 0,
-      message: "success",
-      result: [
-        {
-          battleid: "123456789",
-          reporttime: "2023-01-01 12:00:00",
-        },
-      ],
-    }
-
+    const response = await fetch(
+      `${MLBB_SERVER}battlelist/judge?authkey=${API_KEY}&judgeid=${this.refereeId}`,
+    )
+    const data = await response.json() as MatchesByReferee
     return data.result
   }
 }

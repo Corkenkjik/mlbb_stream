@@ -5,6 +5,7 @@ import refereeRouter from "./referee.ts"
 import streamRouter from "./stream.ts"
 import { GameController } from "#game-controller/controller.ts"
 import { DataRepository } from "#repository/repository.ts"
+import { controllerEvents } from "#game-controller/event.ts"
 
 const gameRouter = new Router({
   prefix: "/game",
@@ -17,7 +18,7 @@ gameRouter.post("/create-game", async (ctx) => {
 })
 
 gameRouter.delete("/reset", async (ctx) => {
-  DataRepository.getInstance().reset()
+  controllerEvents.emit("reset", null)
   ctx.response.body = "OK"
 })
 

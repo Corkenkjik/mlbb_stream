@@ -19,10 +19,9 @@ export class ClockPlugin extends VmixPlugin {
     return `${VMIX_SERVER}/?Function=StartCountdown&Input=${this.blockId}`
   }
   public pauseClock() {
-    return ""
+    return `${VMIX_SERVER}/?Function=PauseCountdown&Input=${this.blockId}`
   }
   public resetClock() {
-    // TODO: Change the function according to vmix docs
-    return `${VMIX_SERVER}/?Function=ResetCountdown&Input=${this.blockId}`
+    return `${VMIX_SERVER}/?Function=StopCountdown&Input=${this.blockId}`
   }
 }

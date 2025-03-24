@@ -34,7 +34,7 @@ export interface BattleData {
   // kill_lord_money_advantage: number
   paused: boolean
   camp_list: Camp[]
-  incre_event_list: EventList[]
+  incre_event_list: EventList[] | null
   // rune_2023: boolean
   // banpick_paused: boolean
 }
@@ -76,9 +76,16 @@ export interface Player {
   // pick_order: number
 }
 
-export interface EventList {
-  event_type: string
+type EventList =
+  | BossEvent
+  | { event_type: "any" }
 
+export interface BossEvent {
+  event_type: "kill_boss"
+  campid: 1 | 2 | 5
+  boss_name: "tortoise" | "lord"
+  killer_name: string
+  game_time: number
 }
 
 export interface PostBattleResponse {
@@ -111,7 +118,7 @@ export interface PostBattleHero {
   equip_list: number[]
   level: number
   total_money: number
-  rune: number
+  runeid: number
   skillid: number
   rune_map: any | null
 }

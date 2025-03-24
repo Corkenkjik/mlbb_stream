@@ -1,4 +1,5 @@
 import { DataRepository } from "#repository/repository.ts"
+import { RateLimiter } from "#rate-limiter"
 import { EventRegistries, EventRegistry } from "../types.ts"
 import { VmixPlugin } from "./base-plugin.ts"
 
@@ -6,7 +7,7 @@ export class WaitingPlugin extends VmixPlugin {
   private existedPicks = new Set<string>()
 
   override eventsRegistered: EventRegistries = {
-    state: ["init", "adjust"],
+    state: ["init"],
     data: ["players"],
   }
 
@@ -41,7 +42,7 @@ export class WaitingPlugin extends VmixPlugin {
       },
     ).filter((x) => x !== undefined)
 
-    const redUrls = DataRepository.getInstance().players.blue.map(
+    const redUrls = DataRepository.getInstance().players.red.map(
       (player, index) => {
         const pos = index + 1
         const blockName = `p${pos}dhero`
@@ -69,6 +70,11 @@ export class WaitingPlugin extends VmixPlugin {
       urls = this.createScreenUrls()
     }
     return urls
+  }
+
+  public async run() {
+    const urls = this.createScreenUrls()
+    await RateLimiter.execute(urls)
   }
 
   /* public override allUrls(): string[] {

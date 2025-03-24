@@ -1,6 +1,7 @@
 import { DataRepository } from "#repository/repository.ts"
 import {
   BattleData,
+  BossEvent,
   Camp,
   Player,
   PostBattleCamp,
@@ -12,6 +13,8 @@ import { PlayerData, TeamData } from "../repository/types.ts"
 import { controllerEvents } from "#game-controller/event.ts"
 
 export class DataPipeline {
+  private events = new Map() // Deduplicate the events based on timestamp
+
   private getTeam = (data: BattleData) => {
     let blueTeam = {} as Camp
     let redTeam = {} as Camp
@@ -57,7 +60,7 @@ export class DataPipeline {
       level: data.level,
       mvp: data.mvp && winCamp === data.campid,
       pick: data.heroid,
-      rune: data.rune,
+      rune: data.runeid,
       runeMap: data.rune_map,
       skillid: data.skillid,
     }
@@ -67,26 +70,57 @@ export class DataPipeline {
     // Sleep for one seconds, then prompt the alert board
     if (data.tortoise_left_time === 1) {
       setTimeout(() => {
-        controllerEvents.emit("tortoise-spawn", null)
+        if (!this.events.has(data.game_time)) {
+          this.events.set(data.game_time, "tortoise-spawn")
+          controllerEvents.emit("tortoise-spawn", null)
+        }
       }, 1000)
     }
 
     // first lord will spawn in 8 minute
-    if (data.game_time === 8 * 60) {
-      controllerEvents.emit("lord-spawn", null)
+    if (data.game_time === (8 * 60 + 5)) {
+      if (!this.events.has(data.game_time)) {
+        this.events.set(data.game_time, "lord-spawn")
+        controllerEvents.emit("lord-spawn", null)
+      }
     }
 
     // the second lord and so on will be the same as tortoise
     if (data.lord_left_time === 1) {
       setTimeout(() => {
-        controllerEvents.emit("lord-spawn", null)
+        if (!this.events.has(data.game_time)) {
+          this.events.set(data.game_time, "lord-spawn")
+          controllerEvents.emit("lord-spawn", null)
+        }
       }, 1000)
     }
 
-    // TODO: add logic to handle rùa, lord
-    const killTortoise = data.incre_event_list.findLast((e) =>
-      e.event_type === "kill_tortoise"
-    )
+    if (data.incre_event_list && data.incre_event_list.length > 0) {
+      const tortoiseEvents = data.incre_event_list.filter((e) =>
+        e.event_type === "kill_boss" && e.boss_name === "tortoise"
+      )
+      if (tortoiseEvents.length > 0) {
+        const lastEvent = tortoiseEvents[tortoiseEvents.length - 1] as BossEvent
+        if (!this.events.has(lastEvent.game_time)) {
+          this.events.set(lastEvent.game_time, "tortoise-kill")
+          controllerEvents.emit("tortoise-kill", {
+            killer: lastEvent.killer_name,
+          })
+        }
+      }
+      const lordEvents = data.incre_event_list.filter((e) =>
+        e.event_type === "kill_boss" && e.boss_name === "lord"
+      )
+      if (lordEvents.length > 0) {
+        const lastEvent = lordEvents[lordEvents.length - 1] as BossEvent
+        if (!this.events.has(lastEvent.game_time)) {
+          this.events.set(lastEvent.game_time, "lord-kill")
+          controllerEvents.emit("lord-kill", {
+            killer: lastEvent.killer_name,
+          })
+        }
+      }
+    }
   }
 
   private banHandler(data: BattleData) {
@@ -139,6 +173,8 @@ export class DataPipeline {
       blue: bluePlayers,
       red: redPlayers,
     })
+
+    DataRepository.getInstance().reducers["phaseLeftTime"](data.state_left_time)
   }
 
   private ingameHandler(data: BattleData) {
@@ -182,6 +218,7 @@ export class DataPipeline {
 
   public process(data: BattleData) {
     DataRepository.getInstance().reducers["gameState"](data.state)
+
     if (data.state === "ban") {
       this.banHandler(data)
     } else if (data.state === "pick") {
@@ -190,6 +227,8 @@ export class DataPipeline {
       return this.ingameHandler(data)
     } else if (data.state === "end") {
       return "end"
+    } else if (data.state === "adjust") {
+      return "adjust"
     }
   }
 
@@ -252,12 +291,12 @@ export class DataPipeline {
     })
   }
 
-  private postgameTeamHandler(data: PostBattleCamp[]) {
+  private postgameTeamHandler(
+    data: PostBattleCamp[],
+    { blueScore, redScore }: { blueScore: number; redScore: number },
+  ) {
     const blueCamp = data.find((x) => x.campid === 1)!
     const redCamp = data.find((x) => x.campid === 2)!
-
-    const blueScore = DataRepository.getInstance().teams.blue.score
-    const redScore = DataRepository.getInstance().teams.red.score
 
     const blueTeam: TeamData = {
       bans: blueCamp.ban_hero_list || [],
@@ -287,10 +326,24 @@ export class DataPipeline {
     })
   }
 
+  private scoreReduce(data: PostBattleData) {
+    const bluePlayers = data.hero_list.filter((x) => x.campid === 1)
+    const redPlayers = data.hero_list.filter((x) => x.campid === 2)
+
+    const blueScore = bluePlayers.reduce((acc, cur) => acc + cur.kill_num, 0)
+    const redScore = redPlayers.reduce((acc, cur) => acc + cur.kill_num, 0)
+
+    return { blueScore, redScore }
+  }
+
   public processPostgameData(data: PostBattleData) {
     const winCamp = data.win_camp
+    const gameTime = data.game_time
+    const { blueScore, redScore } = this.scoreReduce(data)
+
     DataRepository.getInstance().reducers["winCamp"](winCamp)
+    DataRepository.getInstance().reducers["gameTime"](gameTime)
     this.postGamePlayersHandler(data.hero_list, winCamp)
-    this.postgameTeamHandler(data.camp_list)
+    this.postgameTeamHandler(data.camp_list, { blueScore, redScore })
   }
 }

@@ -1,6 +1,7 @@
 import { repositoryEvents } from "./event.ts"
 import { FieldTypes, ISetup, PlayerData, TeamData } from "./types.ts"
 import { BattleState } from "../game-source/types.ts"
+import { controllerEvents } from "#game-controller/event.ts"
 
 const intialTeamData: TeamData = {
   bans: [],
@@ -51,7 +52,7 @@ export class DataRepository {
     red: [],
   }
   public winCamp: number = 0
-  // private _gameTime: number | undefined
+  public gameTime: number | undefined
   // unstableFlags: string[] = []
 
   public get setup() {
@@ -119,10 +120,9 @@ export class DataRepository {
   }
 
   private subscribeEvents() {
-    /* controllerEvents.on("create-game", () => {
-      console.log("on create-game, reset the DataRepository")
+    controllerEvents.on("reset", () => {
       this.reset()
-    }) */
+    })
   }
 
   public reset() {
@@ -198,6 +198,9 @@ export class DataRepository {
     },
     "winCamp": (payload: number) => {
       this.winCamp = payload
+    },
+    "gameTime": (payload: number) => {
+      this.gameTime = payload
     },
     /* "players": (payload: PlayerData[]) => {
       if (this.unstableFlags.includes("players-ban")) {
