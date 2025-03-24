@@ -1,0 +1,29 @@
+{
+  "tasks": {
+    "dev": "deno run --watch main.ts"
+  },
+  "imports": {
+    "@kinbay/logger": "jsr:@kinbay/logger",
+    "@oak/oak": "jsr:@oak/oak",
+    "@fast-xml-parser": "npm:fast-xml-parser",
+    "eventemitter3": "npm:eventemitter3",
+    "@tajpouria/cors": "jsr:@tajpouria/cors",
+    "#lib/": "./src/lib/",
+    "#game-source/": "./src/module/game-source/",
+    "#repository/": "./src/module/repository/",
+    "#game-controller/": "./src/module/game-controller/",
+    "#singleton": "./server/singleton.ts",
+    "#rate-limiter": "./src/module/rate-limiter.ts"
+  },
+  "lint": {
+    "rules": {
+      "exclude": [
+        "no-explicit-any",
+        "require-await"
+      ]
+    }
+  },
+  "fmt": {
+    "semiColons": false
+  }
+}
